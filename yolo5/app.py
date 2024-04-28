@@ -8,10 +8,20 @@ from loguru import logger
 import os
 import boto3
 from botocore.exceptions import ClientError
-from datetime import datetime
+from pymongo import MongoClient
 
 images_bucket = os.environ['BUCKET_NAME']
 bucket_predictions_dir = 'predictions'
+mongodb_connection_string = "mongodb://mongodb:27017"
+
+
+def store_prediction(connection, prediction_summary):
+    client = MongoClient(connection)
+    db = client['predictions_db']
+    collection = db['predictions']
+    result = collection.insert_one(prediction_summary)
+    logger.info(f'Mongo result: {result}')
+
 
 
 def upload_file(file_name, bucket, object_name):
@@ -96,11 +106,17 @@ def predict():
             'labels': labels,
             'time': time.time()
         }
+        prediction_response = {
+            'prediction_id': prediction_id,
+            'predicted_img_path': str(predicted_img_path),
+        }
 
-        # TODO store the prediction_summary in MongoDB
+        logger.info(f'Prediction summary: {prediction_summary}')
+
+        store_prediction(mongodb_connection_string, prediction_summary)
 
         # return prediction_summary
-        return make_response(jsonify(prediction_summary), 200)
+        return make_response(jsonify(prediction_response), 200)
     else:
         return f'prediction: {prediction_id}/{original_img_path}. prediction result not found', 404
 
