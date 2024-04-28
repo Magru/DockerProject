@@ -1,5 +1,6 @@
 FROM ultralytics/yolov5:v6.2-cpu
 WORKDIR /usr/src/app
+ENV BUCKET_NAME=max-yolo5
 RUN pip install --upgrade pip
 COPY requirements.txt .
 RUN pip install -r requirements.txt

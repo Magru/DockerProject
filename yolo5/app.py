@@ -1,22 +1,45 @@
 import time
 from pathlib import Path
-from flask import Flask, request
+from flask import Flask, request, make_response, jsonify
 from detect import run
 import uuid
 import yaml
 from loguru import logger
 import os
+import boto3
+from botocore.exceptions import ClientError
+from datetime import datetime
 
 images_bucket = os.environ['BUCKET_NAME']
+bucket_predictions_dir = 'predictions'
+
+
+def upload_file(file_name, bucket, object_name):
+    s3_client = boto3.client('s3')
+    try:
+        response = s3_client.upload_file(file_name, bucket, object_name)
+        logger.info(f'Uploading response: {response}.')
+    except ClientError as e:
+        logger.error(f'Error on uploading to bucket: {e}.')
+        return False
+    return True
+
 
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
 
 app = Flask(__name__)
 
+
+@app.route("/check", methods=['GET'])
+def check():
+    return "ok"
+
+
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Generates a UUID for this current prediction HTTP request. This id can be used as a reference in logs to identify and track individual prediction requests.
+    # Generates a UUID for this current prediction HTTP request.
+    # This id can be used as a reference in logs to identify and track individual prediction requests.
     prediction_id = str(uuid.uuid4())
 
     logger.info(f'prediction: {prediction_id}. start processing')
@@ -24,9 +47,9 @@ def predict():
     # Receives a URL parameter representing the image to download from S3
     img_name = request.args.get('imgName')
 
-    # TODO download img_name from S3, store the local image path in the original_img_path variable.
-    #  The bucket name is provided as an env var BUCKET_NAME.
-    original_img_path = ...
+    s3 = boto3.client('s3')
+    s3.download_file(images_bucket, img_name, 'test.jpg')
+    original_img_path = 'test.jpg'
 
     logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
 
@@ -43,10 +66,12 @@ def predict():
     logger.info(f'prediction: {prediction_id}/{original_img_path}. done')
 
     # This is the path for the predicted image with labels
-    # The predicted image typically includes bounding boxes drawn around the detected objects, along with class labels and possibly confidence scores.
+    # The predicted image typically includes bounding boxes drawn around the detected objects,
+    # along with class labels and possibly confidence scores.
     predicted_img_path = Path(f'static/data/{prediction_id}/{original_img_path}')
 
-    # TODO Uploads the predicted image (predicted_img_path) to S3 (be careful not to override the original image).
+    object_name = bucket_predictions_dir + '/' + prediction_id + '_' + original_img_path
+    upload_file(predicted_img_path, images_bucket, object_name)
 
     # Parse prediction labels and create a summary
     pred_summary_path = Path(f'static/data/{prediction_id}/labels/{original_img_path.split(".")[0]}.txt')
@@ -67,14 +92,15 @@ def predict():
         prediction_summary = {
             'prediction_id': prediction_id,
             'original_img_path': original_img_path,
-            'predicted_img_path': predicted_img_path,
+            'predicted_img_path': str(predicted_img_path),
             'labels': labels,
             'time': time.time()
         }
 
         # TODO store the prediction_summary in MongoDB
 
-        return prediction_summary
+        # return prediction_summary
+        return make_response(jsonify(prediction_summary), 200)
     else:
         return f'prediction: {prediction_id}/{original_img_path}. prediction result not found', 404
 
