@@ -1,7 +1,7 @@
 version: '3'
 services:
   polybot:
-    image: polybot:0.0.1.1
+    image: polybot:0.1.4
     container_name: polybot
     env_file:
       - .env
@@ -11,6 +11,8 @@ services:
       - mongodb_mongoCluster
     tty: true
     stdin_open: true
+    volumes:
+      - $HOME/.aws/credentials:/root/.aws/credentials
 
 networks:
   mongodb_mongoCluster:

@@ -1,14 +1,34 @@
 import shutil
+import os
+import time
+import uuid
+from img_proc import Img
 
 import requests
 import telebot
 from loguru import logger
-import os
-import time
-
+import boto3
+from botocore.exceptions import ClientError
 from telebot import types
 from telebot.types import InputFile
-from img_proc import Img
+
+
+def upload_image_file_to_s3(file_name, object_name, add_unique=False):
+    s3_bucket_name = os.environ['BUCKET_NAME']
+    s3_client = boto3.client('s3')
+
+    if add_unique:
+        unique_id = str(uuid.uuid4())
+        name, extension = os.path.splitext(object_name)
+        object_name = f"{name}_{unique_id}{extension}"
+
+    try:
+        response = s3_client.upload_file(file_name, s3_bucket_name, object_name)
+        logger.info(f'Uploading response: {response}.')
+    except ClientError as e:
+        logger.error(f'Error on uploading to bucket: {e}.')
+        return False
+    return object_name
 
 
 class Bot:
@@ -257,35 +277,51 @@ class ImageProcessingBot(Bot):
         media_group_id = msg.get('media_group_id')
 
         if not caption:
-            group = _if_media_group_ready(media_group_id)
-            logger.info(_if_media_group_ready)
-            if group:
-                first_image = Img(group[0])
-                second_image = Img(group[1])
-                first_image.handle_filter('concat', other_img=second_image)
-                filtered_image = first_image.save_img()
-                self.send_photo(chat_id, filtered_image)
-                clear_photos_folder()
-                return
-
-            self.send_text(chat_id, self.handle_text_message('caption_not_defined', chat_id))
+            self._handle_media_group(media_group_id, chat_id)
         elif self._validate_action(caption.lower()):
-            if caption.lower() == 'concat':
-                media_group_file = open('photos/' + media_group_id, 'w')
-                media_group_file.close()
-            if caption.lower() == 'predict':
-                single_file_path = self.download_user_photo(msg)
-                logger.info('predict method ' + single_file_path)
-            else:
-                if self.is_current_msg_photo(msg):
-                    try:
-                        single_file_path = self.download_user_photo(msg)
-                        img = Img(single_file_path)
-                        img.handle_filter(caption.lower())
-                        filtered_image_path = img.save_img()
-                        self.send_photo(chat_id, filtered_image_path)
-                        clear_photos_folder()
-                    except Exception as err:
-                        self.send_text(chat_id, self.handle_text_message('error', chat_id))
+            self._handle_action(caption.lower(), msg, chat_id)
         else:
             self.send_text(chat_id, self.handle_text_message('action_not_valid', chat_id))
+
+    def _handle_media_group(self, media_group_id, chat_id):
+        group = _if_media_group_ready(media_group_id)
+        logger.info(_if_media_group_ready)
+        if group:
+            first_image = Img(group[0])
+            second_image = Img(group[1])
+            first_image.handle_filter('concat', other_img=second_image)
+            filtered_image = first_image.save_img()
+            self.send_photo(chat_id, filtered_image)
+            clear_photos_folder()
+        else:
+            self.send_text(chat_id, self.handle_text_message('caption_not_defined', chat_id))
+
+    def _handle_action(self, action, msg, chat_id):
+        if action == 'concat':
+            self._handle_concat_action(msg, chat_id)
+        elif action == 'predict':
+            self._handle_predict_action(msg, chat_id)
+        else:
+            self._handle_single_image_action(action, msg, chat_id)
+
+    def _handle_concat_action(self, msg, chat_id):
+        media_group_file = open('photos/' + msg['media_group_id'], 'w')
+        media_group_file.close()
+
+    def _handle_predict_action(self, msg, chat_id):
+        single_file_path = self.download_user_photo(msg)
+        file_name = os.path.basename(single_file_path)
+        upload_res = upload_image_file_to_s3(single_file_path, f'{chat_id}/{file_name}', True)
+        logger.info(f'Upload res: {upload_res}')
+
+    def _handle_single_image_action(self, action, msg, chat_id):
+        if self.is_current_msg_photo(msg):
+            try:
+                single_file_path = self.download_user_photo(msg)
+                img = Img(single_file_path)
+                img.handle_filter(action)
+                filtered_image_path = img.save_img()
+                self.send_photo(chat_id, filtered_image_path)
+                clear_photos_folder()
+            except Exception as err:
+                self.send_text(chat_id, self.handle_text_message('error', chat_id))
