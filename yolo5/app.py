@@ -23,7 +23,6 @@ def store_prediction(connection, prediction_summary):
     logger.info(f'Mongo result: {result}')
 
 
-
 def upload_file(file_name, bucket, object_name):
     s3_client = boto3.client('s3')
     try:

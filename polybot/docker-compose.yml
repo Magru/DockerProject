@@ -1,0 +1,17 @@
+version: '3'
+services:
+  polybot:
+    image: polybot:0.0.1.1
+    container_name: polybot
+    env_file:
+      - .env
+    ports:
+      - "8443:8443"
+    networks:
+      - mongodb_mongoCluster
+    tty: true
+    stdin_open: true
+
+networks:
+  mongodb_mongoCluster:
+    external: true
