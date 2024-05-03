@@ -55,10 +55,10 @@ def predict():
 
     # Receives a URL parameter representing the image to download from S3
     img_name = request.args.get('imgName')
-
+    dir_name, file_name = os.path.split(img_name)
     s3 = boto3.client('s3')
-    s3.download_file(images_bucket, img_name, 'test.jpg')
-    original_img_path = 'test.jpg'
+    original_img_path = file_name
+    s3.download_file(images_bucket, img_name, original_img_path)
 
     logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
 
@@ -79,7 +79,7 @@ def predict():
     # along with class labels and possibly confidence scores.
     predicted_img_path = Path(f'static/data/{prediction_id}/{original_img_path}')
 
-    object_name = bucket_predictions_dir + '/' + prediction_id + '_' + original_img_path
+    object_name = dir_name + '/' + prediction_id + '_' + original_img_path
     upload_file(predicted_img_path, images_bucket, object_name)
 
     # Parse prediction labels and create a summary

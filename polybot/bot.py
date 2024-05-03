@@ -31,6 +31,16 @@ def upload_image_file_to_s3(file_name, object_name, add_unique=False):
     return object_name
 
 
+def predict_request(img):
+    url = f'http://172.28.0.3:8081/predict?imgName={img}'
+    response = requests.post(url)
+
+    if response.status_code == 200:
+        logger.info(f'Response {response.json()}')
+    else:
+        print(f"Request failed with status code {response.status_code}")
+
+
 class Bot:
 
     def __init__(self, token, telegram_chat_url):
@@ -313,6 +323,8 @@ class ImageProcessingBot(Bot):
         file_name = os.path.basename(single_file_path)
         upload_res = upload_image_file_to_s3(single_file_path, f'{chat_id}/{file_name}', True)
         logger.info(f'Upload res: {upload_res}')
+
+        predict_request(upload_res)
 
     def _handle_single_image_action(self, action, msg, chat_id):
         if self.is_current_msg_photo(msg):
