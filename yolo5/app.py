@@ -107,7 +107,8 @@ def predict():
         }
         prediction_response = {
             'prediction_id': prediction_id,
-            'predicted_img_path': str(predicted_img_path),
+            'predicted_img_path': str(object_name),
+            'labels': labels
         }
 
         logger.info(f'Prediction summary: {prediction_summary}')

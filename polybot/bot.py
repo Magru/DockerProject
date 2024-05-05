@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 from img_proc import Img
+import json
 
 import requests
 import telebot
@@ -23,22 +24,74 @@ def upload_image_file_to_s3(file_name, object_name, add_unique=False):
         object_name = f"{name}_{unique_id}{extension}"
 
     try:
-        response = s3_client.upload_file(file_name, s3_bucket_name, object_name)
-        logger.info(f'Uploading response: {response}.')
+        s3_client.upload_file(file_name, s3_bucket_name, object_name)
     except ClientError as e:
         logger.error(f'Error on uploading to bucket: {e}.')
         return False
     return object_name
 
 
+def beautify_data(data):
+    with open('emoji_map.json', 'r') as file:
+        emoji_map = json.load(file)
+
+    default_emoji = '❓'
+
+    output = "Object Count:\n"
+    for item, count in data.items():
+        emoji = emoji_map.get(item, default_emoji)
+        output += f"{emoji} {item.capitalize()}: {count}\n"
+
+    return output
+
+
+def download_file(path, file_name):
+    s3_bucket_name = os.environ['BUCKET_NAME']
+    dest_path = 'res_images'
+    if not os.path.exists(dest_path):
+        os.makedirs(dest_path)
+
+    s3 = boto3.client('s3')
+    try:
+        s3.download_file(s3_bucket_name, path, f'{dest_path}/{file_name}')
+    except ClientError as e:
+        logger.error(f'Error on downloading from bucket: {e}.')
+        return False
+    return f'{dest_path}/{file_name}'
+
+
+def count_objects(objects):
+    class_count = {}
+    for obj in objects:
+        class_name = obj['class']
+        if class_name in class_count:
+            class_count[class_name] += 1
+        else:
+            class_count[class_name] = 1
+    return class_count
+
+
 def predict_request(img):
-    url = f'http://172.28.0.3:8081/predict?imgName={img}'
+    url = f'http://172.28.0.5:8081/predict?imgName={img}'
     response = requests.post(url)
 
     if response.status_code == 200:
-        logger.info(f'Response {response.json()}')
+        res = response.json()
+        object_response = count_objects(res['labels'])
+        image_path = res['predicted_img_path']
+        logger.info(f'Response {object_response} Image: {image_path}')
+        predicted_img = download_file(image_path, os.path.basename(image_path))
+        return {
+            'status': 'Ok',
+            'path': predicted_img,
+            'objects': object_response
+        }
     else:
-        print(f"Request failed with status code {response.status_code}")
+        return {
+            'status': 'Error',
+            'path': '',
+            'msg': response.status_code
+        }
 
 
 class Bot:
@@ -200,13 +253,14 @@ class Bot:
 
         return file_info.file_path
 
-    def send_photo(self, chat_id, img_path):
+    def send_photo(self, chat_id, img_path, caption=''):
         if not os.path.exists(img_path):
             raise RuntimeError("Image path doesn't exist")
 
         self.telegram_bot_client.send_photo(
             chat_id,
-            InputFile(img_path)
+            InputFile(img_path),
+            caption
         )
 
     def handle_message(self, msg):
@@ -248,9 +302,7 @@ def _if_media_group_ready(media_group_id):
         return f"Error: {e}"
 
 
-def clear_photos_folder():
-    photos_path = 'photos'
-
+def clear_photos_folder(photos_path='photos'):
     try:
         if os.path.exists(photos_path):
             for filename in os.listdir(photos_path):
@@ -261,12 +313,12 @@ def clear_photos_folder():
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)
                 except Exception as e:
-                    print(f'Failed to delete {file_path}. Reason: {e}')
-            print("All files in 'photos' folder have been cleared.")
+                    logger.error(f'Failed to delete {file_path}. Reason: {e}')
+            logger.info(f"All files in '{photos_path}' folder have been cleared.")
         else:
-            print("'photos' folder does not exist.")
+            logger.error("'photos' folder does not exist.")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
 
 
 class ImageProcessingBot(Bot):
@@ -322,9 +374,13 @@ class ImageProcessingBot(Bot):
         single_file_path = self.download_user_photo(msg)
         file_name = os.path.basename(single_file_path)
         upload_res = upload_image_file_to_s3(single_file_path, f'{chat_id}/{file_name}', True)
-        logger.info(f'Upload res: {upload_res}')
+        predict_response = predict_request(upload_res)
 
-        predict_request(upload_res)
+        if predict_response['status'] == 'Ok':
+            self.send_photo(chat_id, predict_response['path'], beautify_data(predict_response['objects']))
+            clear_photos_folder()
+        else:
+            self.send_text(chat_id, predict_response['msg'])
 
     def _handle_single_image_action(self, action, msg, chat_id):
         if self.is_current_msg_photo(msg):
@@ -334,6 +390,6 @@ class ImageProcessingBot(Bot):
                 img.handle_filter(action)
                 filtered_image_path = img.save_img()
                 self.send_photo(chat_id, filtered_image_path)
-                clear_photos_folder()
+                clear_photos_folder('res_images')
             except Exception as err:
                 self.send_text(chat_id, self.handle_text_message('error', chat_id))

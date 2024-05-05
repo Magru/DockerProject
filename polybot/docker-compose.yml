@@ -1,7 +1,7 @@
 version: '3'
 services:
   polybot:
-    image: polybot:0.2.5
+    image: polybot:0.3.3
     container_name: polybot
     env_file:
       - .env
