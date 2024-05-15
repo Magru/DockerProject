@@ -1,0 +1,72 @@
+version: '3'
+services:
+  polybot:
+    image: ${POLYBOT_IMG_NAME}
+    container_name: polybot
+    env_file:
+      - .env
+    ports:
+      - "8443:8443"
+    networks:
+      - mongoCluster
+    tty: true
+    stdin_open: true
+    volumes:
+      - $HOME/.aws/credentials:/root/.aws/credentials
+
+  bot-yolo5:
+    image: ${YOLO5_IMG_NAME}
+    container_name: bot-yolo5
+    networks:
+      - mongoCluster
+    environment:
+      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=mongoReplicaSet
+      - BUCKET_NAME=max-yolo5
+    volumes:
+      - ${HOME}/.aws/credentials:/root/.aws/credentials
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo1
+
+  mongo1:
+    image: mongo:5
+    hostname: mongo1
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data-1:/data/db
+    networks:
+      - mongoCluster
+    command: mongod --replSet mongoReplicaSet --bind_ip_all
+
+  mongo2:
+    image: mongo:5
+    hostname: mongo2
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data-2:/data/db
+    networks:
+      - mongoCluster
+    command: mongod --replSet mongoReplicaSet --bind_ip_all
+
+  mongo3:
+    image: mongo:5
+    hostname: mongo3
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo-data-3:/data/db
+    networks:
+      - mongoCluster
+    command: mongod --replSet mongoReplicaSet --bind_ip_all
+
+volumes:
+  mongo-data-1:
+  mongo-data-2:
+  mongo-data-3:
+
+networks:
+  mongoCluster:
+    driver: bridge

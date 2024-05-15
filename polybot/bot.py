@@ -72,7 +72,7 @@ def count_objects(objects):
 
 
 def predict_request(img):
-    url = f'http://172.28.0.5:8081/predict?imgName={img}'
+    url = f'http://bot-yolo5:8081/predict?imgName={img}'
     response = requests.post(url)
 
     if response.status_code == 200:
@@ -316,7 +316,7 @@ def clear_photos_folder(photos_path='photos'):
                     logger.error(f'Failed to delete {file_path}. Reason: {e}')
             logger.info(f"All files in '{photos_path}' folder have been cleared.")
         else:
-            logger.error("'photos' folder does not exist.")
+            logger.error(f"'{photos_path}' folder does not exist.")
     except Exception as e:
         logger.error(f"Error: {e}")
 

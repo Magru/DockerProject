@@ -12,7 +12,7 @@ from pymongo import MongoClient
 
 images_bucket = os.environ['BUCKET_NAME']
 bucket_predictions_dir = 'predictions'
-mongodb_connection_string = "mongodb://mongodb:27017"
+mongodb_connection_string = os.environ["MONGO_URI"]
 
 
 def store_prediction(connection, prediction_summary):
