@@ -12,7 +12,7 @@ services:
     tty: true
     stdin_open: true
     volumes:
-      - $HOME/.aws/credentials:/root/.aws/credentials
+      - ${HOME}/.aws/credentials:/root/.aws/credentials
 
   bot-yolo5:
     image: ${YOLO5_IMG_NAME}
@@ -20,8 +20,8 @@ services:
     networks:
       - mongoCluster
     environment:
-      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=mongoReplicaSet
       - BUCKET_NAME=max-yolo5
+      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=mongoReplicaSet
     volumes:
       - ${HOME}/.aws/credentials:/root/.aws/credentials
     ports:
@@ -36,9 +36,10 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data-1:/data/db
+      - ./init-replica.sh:/docker-entrypoint-initdb.d/init-replica.sh
     networks:
       - mongoCluster
-    command: mongod --replSet mongoReplicaSet --bind_ip_all
+    command: bash -c "mongod --replSet mongoReplicaSet --bind_ip_all & sleep 15 && /docker-entrypoint-initdb.d/init-replica.sh"
 
   mongo2:
     image: mongo:5
