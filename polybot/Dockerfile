@@ -11,10 +11,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the .env file into the container
-COPY .env .
+#COPY .env .
 
 # Load environment variables from the .env file
-ENV $(cat .env | xargs)
+#ENV $(cat .env | xargs)
 
 # Copy the rest of the application code into the container
 COPY . .
