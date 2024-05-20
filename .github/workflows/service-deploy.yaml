@@ -71,8 +71,8 @@ jobs:
           script: |
             # You deployment script here...
             
-            sudo apt update && sudo apt install jq -y
-            
+            sudo apt update && sudo apt install jq -y && sudo apt install -y docker-compose-plugin
+                        
             cd PolybotService/
             
             # Save telegram bot token in a secret file, to be used in docker-compose.yaml
