@@ -2,11 +2,12 @@ import flask
 from flask import request
 import os
 from bot import Bot, ImageProcessingBot
+from get_docker_secret import get_docker_secret
 
 
 app = flask.Flask(__name__)
 
-TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
+TELEGRAM_TOKEN = get_docker_secret('telegram_bot_token')
 TELEGRAM_APP_URL = os.environ['TELEGRAM_APP_URL']
 # version test comment
 
