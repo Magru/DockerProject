@@ -71,7 +71,7 @@ jobs:
           script: |
             # You deployment script here...
             
-            sudo apt update && sudo apt install jq -y && sudo apt install -y docker-compose-plugin
+            sudo apt update && sudo apt install jq -y && sudo apt install docker-compose-plugin
                         
             cd PolybotService/
             
