@@ -80,18 +80,25 @@ jobs:
             # Save telegram bot token in a secret file, to be used in docker-compose.yaml
             echo "${{ secrets.TELEGRAM_BOT_TOKEN }}" > telegram_bot_token.secret
             
-            # Get the ngrok current domain (you should assume ngrok is already running in the EC2)
-            NGROK_DOMAIN=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-            
             # Generate .env file
             echo """
             POLYBOT_IMG_NAME=${{ secrets.DOCKER_REPO_USERNAME }}/polybot:${{ github.run_number }}
             YOLO5_IMG_NAME=${{ secrets.DOCKER_REPO_USERNAME }}/yolo5:${{ github.run_number }}
             TELEGRAM_APP_URL=$NGROK_DOMAIN
+            
+            echo $TELEGRAM_APP_URL
+            
             """ > .env
+            
+            # Stop ngrok processes
+            sudo supervisorctl reread
+            sudo supervisorctl update
+            sudo supervisorctl stop ngrok
             
             # Take the service down
             docker compose down
             
             # Take it up with the current updated values
             docker compose up -d
+
+            ngrok http --domain=primary-stable-lioness.ngrok-free.app 8443
