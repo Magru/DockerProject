@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  EC2_PUBLIC_IP: 18.175.122.135
+  EC2_PUBLIC_IP: 18.130.188.246
 
 jobs:
   PolybotBuild:
@@ -90,15 +90,8 @@ jobs:
             
             """ > .env
             
-            # Stop ngrok processes
-            sudo supervisorctl reread
-            sudo supervisorctl update
-            sudo supervisorctl stop ngrok
-            
             # Take the service down
             docker compose down
             
             # Take it up with the current updated values
             docker compose up -d
-
-            ngrok http --domain=primary-stable-lioness.ngrok-free.app 8443
