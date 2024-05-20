@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  EC2_PUBLIC_IP: ec2-18-175-122-135.eu-west-2.compute.amazonaws.com
+  EC2_PUBLIC_IP: 18.175.122.135
 
 jobs:
   PolybotBuild:
@@ -19,7 +19,7 @@ jobs:
         run: |
           cd polybot
           
-          # Login to DockerHub (comment out if you don't use DockerHub) 1:         
+          # Login to DockerHub (comment out if you don't use DockerHub):         
           docker login -u ${{ secrets.DOCKER_REPO_USERNAME }} -p ${{ secrets.DOCKER_REPO_PASSWORD }}
 
           IMAGE_NAME=polybot:${{ github.run_number }}
@@ -59,7 +59,6 @@ jobs:
           host: ${{ env.EC2_PUBLIC_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
           source: docker-compose.yaml
           target: PolybotService/
 
