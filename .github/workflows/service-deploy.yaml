@@ -19,7 +19,7 @@ jobs:
         run: |
           cd polybot
           
-          # Login to DockerHub (comment out if you don't use DockerHub):         
+          # Login to DockerHub (comment out if you don't use DockerHub) 1:         
           docker login -u ${{ secrets.DOCKER_REPO_USERNAME }} -p ${{ secrets.DOCKER_REPO_PASSWORD }}
 
           IMAGE_NAME=polybot:${{ github.run_number }}
