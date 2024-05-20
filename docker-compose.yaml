@@ -23,6 +23,8 @@ services:
       - "8081:8081"
     depends_on:
       - mongo1
+    secrets:
+      - telegram_bot_token
 
   mongo1:
     image: mongo:5
@@ -94,3 +96,9 @@ volumes:
 networks:
   mongoCluster:
     driver: bridge
+
+secrets:
+   telegram_bot_token:
+     file: telegram_bot_token.secret
+   db_root_password:
+     file: db_root_password.txt

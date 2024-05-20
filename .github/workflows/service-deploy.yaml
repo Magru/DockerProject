@@ -84,10 +84,8 @@ jobs:
             echo """
             POLYBOT_IMG_NAME=${{ secrets.DOCKER_REPO_USERNAME }}/polybot:${{ github.run_number }}
             YOLO5_IMG_NAME=${{ secrets.DOCKER_REPO_USERNAME }}/yolo5:${{ github.run_number }}
-            TELEGRAM_APP_URL=$NGROK_DOMAIN
-            
-            echo $TELEGRAM_APP_URL
-            
+            BUCKET_NAME=max-yolo5
+            TELEGRAM_APP_URL=primary-stable-lioness.ngrok-free.app
             """ > .env
             
             # Take the service down
