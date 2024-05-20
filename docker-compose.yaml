@@ -20,7 +20,7 @@ services:
       - mongoCluster
     environment:
       - BUCKET_NAME=max-yolo5
-      - MONGO_URI=mongodb://dockerproject-mongo1-1:27017,dockerproject-mongo1-2:27018,dockerproject-mongo1-3:27019/?replicaSet=mongoReplicaSet
+      - MONGO_URI=mongodb://polybotservice-mongo1-1:27017,polybotservice-mongo1-2:27018,polybotservice-mongo1-3:27019/?replicaSet=mongoReplicaSet
     ports:
       - "8081:8081"
     depends_on:
